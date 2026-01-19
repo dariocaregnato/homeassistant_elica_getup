@@ -50,47 +50,175 @@ This integration creates a single device with the following entities:
 4. Enter your credentials:
    - **Username**: Your Elica Connect app email address
    - **Password**: Your Elica Connect app password
-   - **App Identifier**: A unique identifier for your device (e.g., `af3c7b5d2f17b6da`). You can customize this as you like - it's just an identifier used when communicating with Elica servers.
+   - **App Identifier**: A unique identifier for your device (e.g., `af3c7b5d2f17b6da`). You can customize this as you like.
    - **Device Name**: Custom name for your device (default: "Elica Getup")
 
-### Getting Your Credentials
+## Dashboard Example
 
-- **Username & Password**: Use the same credentials as your Elica Connect mobile app (configured in cloud mode)
-- **App Identifier**: Any unique string you want (e.g., `af3c7b5d2f17b6da`, `my-elica-hood`, etc.). Customize it as you prefer.
+Using [Mushroom Cards](https://github.com/piitaya/lovelace-mushroom), you can create a beautiful control interface for your Getup hood.
 
-## Usage
+![Dashboard Example](assets/dashboard.png)
 
-After configuration, you'll find a new device with all entities grouped together. The entity IDs will be based on the device name you choose during setup (e.g., if you choose "Getup", the light will be `light.getup_light`).
-
-### Automation Examples
+### Lovelace Card Configuration
 
 ```yaml
-# Turn on fan when cooking
-automation:
-  - alias: "Auto Hood Fan"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.stove
-        to: "on"
-    action:
-      - service: fan.turn_on
-        target:
-          entity_id: fan.getup_fan
-        data:
-          preset_mode: "2"
-
-# Turn on light at sunset
-automation:
-  - alias: "Hood Light at Sunset"
-    trigger:
-      - platform: sun
-        event: sunset
-    action:
-      - service: light.turn_on
-        target:
-          entity_id: light.getup_light
-        data:
-          brightness: 128
+type: vertical-stack
+cards:
+  - type: custom:mushroom-title-card
+    title: Elica GetUp
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-cover-card
+        entity: cover.getup_position
+        name: Posizione
+        show_buttons_control: true
+        card_mod:
+          style: |
+            mushroom-shape-icon {
+              {% if is_state('cover.getup_position', 'opening') or is_state('cover.getup_position', 'closing') %}
+                animation: blink 1s linear infinite;
+              {% endif %}
+            }
+            @keyframes blink {
+              50% { opacity: 0.5; }
+            }
+      - type: custom:mushroom-light-card
+        entity: light.getup_light
+        name: Luce
+        show_brightness_control: true
+        use_light_color: true
+        collapsible_controls: false
+  - type: vertical-stack
+    cards:
+      - type: custom:mushroom-fan-card
+        entity: fan.getup_fan
+        name: Aspirazione
+        icon_animation: true
+        show_percentage_control: false
+        card_mod:
+          style: |
+            ha-card {
+              box-shadow: none;
+              border-bottom: none;
+              background: none;
+            }
+            mushroom-shape-icon {
+              {% set speed = state_attr('fan.getup_fan', 'preset_mode') %}
+              --icon-color: 
+                {% if is_state('fan.getup_fan', 'off') %} var(--rgb-disabled)
+                {% elif speed == '1' %} var(--rgb-green)
+                {% elif speed == '2' %} var(--rgb-blue)
+                {% elif speed == '3' %} var(--rgb-orange)
+                {% else %} var(--rgb-red) {% endif %};
+              
+              animation: 
+                {% if is_state('fan.getup_fan', 'on') %}
+                  {% if speed == '1' %} rotation 2s linear infinite
+                  {% elif speed == '2' %} rotation 1.2s linear infinite
+                  {% elif speed == '3' %} rotation 0.8s linear infinite
+                  {% else %} rotation 0.4s linear infinite {% endif %}
+                {% else %} none {% endif %};
+            }
+            @keyframes rotation {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+      - type: custom:mushroom-chips-card
+        alignment: center
+        chips:
+          - type: template
+            content: "OFF"
+            icon: mdi:power
+            icon_color: "{% if is_state('fan.getup_fan', 'off') %}grey{% endif %}"
+            tap_action:
+              action: call-service
+              service: fan.turn_off
+              target:
+                entity_id: fan.getup_fan
+          - type: template
+            content: "1"
+            icon_color: >-
+              {% if is_state_attr('fan.getup_fan', 'preset_mode', '1')
+              %}green{% endif %}
+            tap_action:
+              action: call-service
+              service: fan.set_preset_mode
+              service_data:
+                preset_mode: "1"
+              target:
+                entity_id: fan.getup_fan
+          - type: template
+            content: "2"
+            icon_color: >-
+              {% if is_state_attr('fan.getup_fan', 'preset_mode', '2')
+              %}blue{% endif %}
+            tap_action:
+              action: call-service
+              service: fan.set_preset_mode
+              service_data:
+                preset_mode: "2"
+              target:
+                entity_id: fan.getup_fan
+          - type: template
+            content: "3"
+            icon_color: >-
+              {% if is_state_attr('fan.getup_fan', 'preset_mode', '3')
+              %}orange{% endif %}
+            tap_action:
+              action: call-service
+              service: fan.set_preset_mode
+              service_data:
+                preset_mode: "3"
+              target:
+                entity_id: fan.getup_fan
+          - type: template
+            content: B1
+            icon_color: >-
+              {% if is_state_attr('fan.getup_fan', 'preset_mode', 'Boost 1')
+              %}red{% endif %}
+            tap_action:
+              action: call-service
+              service: fan.set_preset_mode
+              service_data:
+                preset_mode: Boost 1
+              target:
+                entity_id: fan.getup_fan
+          - type: template
+            content: B2
+            icon_color: >-
+              {% if is_state_attr('fan.getup_fan', 'preset_mode', 'Boost 2')
+              %}red{% endif %}
+            tap_action:
+              action: call-service
+              service: fan.set_preset_mode
+              service_data:
+                preset_mode: Boost 2
+              target:
+                entity_id: fan.getup_fan
+        card_mod:
+          style: |
+            ha-card {
+              box-shadow: none;
+              background: none;
+              padding-top: 0;
+            }
+  - type: custom:mushroom-chips-card
+    alignment: center
+    chips:
+      - type: template
+        content: "Grassi: {{ states('sensor.getup_filter_grease') }}%"
+        icon: mdi:filter-outline
+        icon_color: green
+      - type: template
+        content: "Carbone: {{ states('sensor.getup_filter_carbon') }}%"
+        icon: mdi:molecule
+        icon_color: blue
+    card_mod:
+      style: |
+        ha-card {
+          box-shadow: none;
+          background: none;
+        }
 ```
 
 ## Technical Notes
