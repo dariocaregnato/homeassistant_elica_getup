@@ -28,7 +28,7 @@ class ElicaCover(CoverEntity):
         self._entry_id = entry_id
         self._device_id = device["id"]
         self._attr_unique_id = f"{self._device_id}_cover"
-        self._attr_device_class = CoverDeviceClass.DAMPER
+        self._attr_device_class = CoverDeviceClass.SHADE
         self._attr_supported_features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
         self._app_uuid = hass.data[DOMAIN][entry_id]["app_uuid"]
         self._is_moving_to = None
