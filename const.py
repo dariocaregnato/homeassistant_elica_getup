@@ -1,0 +1,5 @@
+DOMAIN = "elica_getup"
+URL_TOKEN = "https://cloudprod.elica.com/eiot-api/v1/oauth/token"
+URL_DEVICES = "https://cloudprod.elica.com/eiot-api/v1/devices"
+URL_PRESETS_START = "https://cloudprod.elica.com/eiot-api/v1/presets/start"
+AUTH_BASIC = "Basic ZWlvdC1hcHA6VnF3RzFLVEI3N1VlUk91"

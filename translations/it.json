@@ -1,0 +1,54 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Elica Getup",
+                "description": "Inserisci le credenziali come nell'app Elica Connect, configurata in modalità cloud.\n\n**DISCLAIMER**: Questa è un'integrazione non ufficiale. L'utilizzo è a tuo rischio. Procedendo, riconosci e accetti tutti i rischi associati all'uso di questa integrazione.",
+                "data": {
+                    "username": "Nome utente Elica Connect (Email)",
+                    "password": "Password Elica Connect",
+                    "app_uuid": "Identificatore App (es., af3c7b5d2f17b6da)",
+                    "device_name": "Nome Dispositivo"
+                },
+                "data_description": {
+                    "username": "Il tuo indirizzo email usato nell'app Elica Connect",
+                    "password": "La tua password per l'app Elica Connect",
+                    "app_uuid": "Un identificatore univoco per il tuo dispositivo (es., af3c7b5d2f17b6da). Puoi personalizzarlo come preferisci.",
+                    "device_name": "Nome personalizzato per il dispositivo (predefinito: Elica Getup)"
+                }
+            }
+        },
+        "error": {
+            "invalid_auth": "Credenziali di autenticazione non valide. Controlla nome utente e password di Elica Connect.",
+            "unknown": "Si è verificato un errore imprevisto"
+        },
+        "abort": {
+            "already_configured": "Questo account è già configurato"
+        }
+    },
+    "entity": {
+        "fan": {
+            "fan": {
+                "name": "Ventola"
+            }
+        },
+        "light": {
+            "light": {
+                "name": "Luce"
+            }
+        },
+        "cover": {
+            "position": {
+                "name": "Posizione"
+            }
+        },
+        "sensor": {
+            "filter_carbon": {
+                "name": "Filtro carbone"
+            },
+            "filter_grease": {
+                "name": "Filtro grassi"
+            }
+        }
+    }
+}
