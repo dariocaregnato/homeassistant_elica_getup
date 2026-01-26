@@ -32,8 +32,14 @@ class ElicaFan(FanEntity):
         self._entry_id = entry_id
         self._device_id = device["id"]
         self._attr_unique_id = f"{self._device_id}_fan"
-        self._attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.TURN_OFF | FanEntityFeature.TURN_ON
+        self._attr_supported_features = (
+            FanEntityFeature.SET_SPEED | 
+            FanEntityFeature.TURN_OFF | 
+            FanEntityFeature.TURN_ON | 
+            FanEntityFeature.SET_PRESET_MODE
+        )
         self._attr_speed_count = len(ORDERED_NAMED_FAN_SPEEDS)
+        self._attr_preset_modes = ORDERED_NAMED_FAN_SPEEDS
         self._app_uuid = hass.data[DOMAIN][entry_id]["app_uuid"]
 
     @property
@@ -55,14 +61,14 @@ class ElicaFan(FanEntity):
     @property
     def percentage(self) -> int | None:
         """Return the current speed percentage."""
-        mode = self.preset_mode_full
+        mode = self.preset_mode
         if mode in ORDERED_NAMED_FAN_SPEEDS:
             idx = ORDERED_NAMED_FAN_SPEEDS.index(mode)
             return int((idx + 1) * 100 / self._attr_speed_count)
         return 0
 
     @property
-    def preset_mode_full(self):
+    def preset_mode(self):
         """Return the current speed name."""
         for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
             if d["id"] == self._device_id:
@@ -81,21 +87,25 @@ class ElicaFan(FanEntity):
             for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
                 if d["id"] == self._device_id: d["53"] = 1
             self.async_write_ha_state()
-            await asyncio.sleep(28)
+            # Removed the 28s sleep to avoid blocking commands in Google Home/Matter.
+            # The hood will raise asynchronously, and the speed command will follow.
+            await asyncio.sleep(1) # Small delay for the server to process the raise command
 
     async def async_turn_on(self, percentage=None, preset_mode=None, **kwargs):
-        await self._check_and_raise()
         if percentage:
             await self.async_set_percentage(percentage)
+        elif preset_mode:
+            await self.async_set_preset_mode(preset_mode)
         else:
             await self.async_set_percentage(20) # Default to speed 1
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed percentage of the fan."""
-        await self._check_and_raise()
         if percentage == 0:
             await self.async_turn_off()
             return
+            
+        await self._check_and_raise()
 
         # Map percentage to speed 1, 2, or 3
         idx = min(int((percentage - 1) * self._attr_speed_count / 100), self._attr_speed_count - 1)
