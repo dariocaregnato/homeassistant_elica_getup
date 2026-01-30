@@ -118,15 +118,6 @@ class ElicaFan(FanEntity):
     async def async_turn_off(self, **kwargs):
         await self._send_capabilities({"110": 0})
         self._update_local_state({"110": 0})
-        
-        # Trigger cover close if it's open
-        registry = er.async_get(self.hass)
-        cover_unique_id = f"{self._device_id}_cover"
-        entity_id = registry.async_get_entity_id("cover", DOMAIN, cover_unique_id)
-        if entity_id:
-            await self.hass.services.async_call(
-                "cover", "close_cover", {"entity_id": entity_id}, blocking=False
-            )
 
     async def async_set_preset_mode(self, preset_mode: str):
         await self._check_and_raise()
