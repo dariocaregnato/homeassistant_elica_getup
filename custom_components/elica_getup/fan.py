@@ -38,10 +38,10 @@ class ElicaFan(FanEntity):
         self._device_id = device["id"]
         self._attr_unique_id = f"{self._device_id}_fan"
         self._attr_supported_features = (
-            FanEntityFeature.SET_SPEED | 
+            FanEntityFeature.SET_PERCENTAGE | 
             FanEntityFeature.TURN_OFF | 
             FanEntityFeature.TURN_ON | 
-            FanEntityFeature.SET_PRESET_MODE
+            FanEntityFeature.PRESET_MODE
         )
         self._attr_speed_count = len(ORDERED_NAMED_FAN_SPEEDS)
         self._attr_preset_modes = ORDERED_NAMED_FAN_SPEEDS
