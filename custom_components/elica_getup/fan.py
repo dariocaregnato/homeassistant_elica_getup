@@ -4,13 +4,18 @@ import logging
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN, URL_DEVICES
 
 _LOGGER = logging.getLogger(__name__)
 
-SPEED_TO_CAPS = {"1": {"64": 1, "110": 1}, "2": {"64": 1, "110": 2}, "3": {"64": 1, "110": 3}, "Boost 1": {"64": 4}, "Boost 2": {"64": 8}}
+SPEED_TO_CAPS = {
+    "1": {"64": 1, "110": 1},
+    "2": {"64": 1, "110": 2},
+    "3": {"64": 1, "110": 3},
+    "Boost 1": {"64": 4},
+    "Boost 2": {"64": 8}
+}
 ORDERED_NAMED_FAN_SPEEDS = ["1", "2", "3", "Boost 1", "Boost 2"]
 
 async def async_setup_entry(
@@ -60,7 +65,15 @@ class ElicaFan(FanEntity):
     @property
     def is_on(self):
         try:
-            for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
+            domain_data = self.hass.data.get(DOMAIN)
+            if not domain_data:
+                return False
+            
+            entry_data = domain_data.get(self._entry_id)
+            if not entry_data:
+                return False
+
+            for d in entry_data.get("devices", []):
                 if d["id"] == self._device_id: 
                     return int(d.get("110", 0)) > 0 or int(d.get("64", 0)) > 1
         except Exception:
@@ -79,26 +92,40 @@ class ElicaFan(FanEntity):
     @property
     def preset_mode(self):
         """Return the current speed name."""
-        for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
-            if d["id"] == self._device_id:
-                m64, m110 = int(d.get("64", 0)), int(d.get("110", 0))
-                if m64 == 8: return "Boost 2"
-                if m64 == 4: return "Boost 1"
-                if m64 == 1 and m110 in [1,2,3]: return str(m110)
+        try:
+            entry_data = self.hass.data[DOMAIN][self._entry_id]
+            for d in entry_data["devices"]:
+                if d["id"] == self._device_id:
+                    m64, m110 = int(d.get("64", 0)), int(d.get("110", 0))
+                    if m64 == 8: return "Boost 2"
+                    if m64 == 4: return "Boost 1"
+                    if m64 == 1 and m110 in [1,2,3]: return str(m110)
+        except Exception:
+            pass
         return None
 
     async def _check_and_raise(self):
         pos = 1
-        for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
-            if d["id"] == self._device_id: pos = int(d.get("53", 1))
+        try:
+            devices = self.hass.data[DOMAIN][self._entry_id]["devices"]
+            for d in devices:
+                if d["id"] == self._device_id: 
+                    pos = int(d.get("53", 1))
+        except KeyError:
+            pass
+
         if pos != 1:
             await self._send_capabilities({"53": 1})
-            for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
-                if d["id"] == self._device_id: d["53"] = 1
-            self.async_write_ha_state()
-            # Removed the 28s sleep to avoid blocking commands in Google Home/Matter.
-            # The hood will raise asynchronously, and the speed command will follow.
-            await asyncio.sleep(1) # Small delay for the server to process the raise command
+            # Optimistic update
+            try:
+                for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
+                    if d["id"] == self._device_id: d["53"] = 1
+                self.async_write_ha_state()
+            except KeyError:
+                pass
+            
+            # Small delay for the server to process the raise command
+            await asyncio.sleep(1) 
 
     async def async_turn_on(self, percentage=None, preset_mode=None, **kwargs):
         if percentage:
@@ -136,13 +163,22 @@ class ElicaFan(FanEntity):
             self._update_local_state(caps)
 
     def _update_local_state(self, caps):
-        for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
-            if d["id"] == self._device_id: d.update(caps)
-        self.async_write_ha_state()
+        try:
+            for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
+                if d["id"] == self._device_id: d.update(caps)
+            self.async_write_ha_state()
+        except Exception:
+            pass
 
     async def _send_capabilities(self, cap_dict):
-        token = self.hass.data[DOMAIN][self._entry_id].get("token")
-        payload = {"type": "Hood", "name": "capabilities", "async": True, "capabilities": cap_dict}
-        headers = {'Authorization': f'Bearer {token}', 'App-Uuid': self._app_uuid, 'Content-Type': 'application/json'}
-        async with aiohttp.ClientSession() as session:
-            await session.post(f"{URL_DEVICES}/{self._device_id}/commands", json=payload, headers=headers)
+        try:
+            entry_data = self.hass.data[DOMAIN][self._entry_id]
+            token = entry_data.get("token")
+            if not token: 
+                return
+            payload = {"type": "Hood", "name": "capabilities", "async": True, "capabilities": cap_dict}
+            headers = {'Authorization': f'Bearer {token}', 'App-Uuid': self._app_uuid, 'Content-Type': 'application/json'}
+            async with aiohttp.ClientSession() as session:
+                await session.post(f"{URL_DEVICES}/{self._device_id}/commands", json=payload, headers=headers)
+        except Exception as e:
+            _LOGGER.error("Error sending capabilities: %s", e)
