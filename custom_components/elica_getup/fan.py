@@ -53,9 +53,18 @@ class ElicaFan(FanEntity):
         }
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return True
+
+    @property
     def is_on(self):
-        for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
-            if d["id"] == self._device_id: return int(d.get("110", 0)) > 0 or int(d.get("64", 0)) > 1
+        try:
+            for d in self.hass.data[DOMAIN][self._entry_id]["devices"]:
+                if d["id"] == self._device_id: 
+                    return int(d.get("110", 0)) > 0 or int(d.get("64", 0)) > 1
+        except Exception:
+            pass
         return False
 
     @property
