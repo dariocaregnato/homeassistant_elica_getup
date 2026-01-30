@@ -32,11 +32,14 @@ class ElicaFan(FanEntity):
         self._entry_id = entry_id
         self._device_id = device["id"]
         self._attr_unique_id = f"{self._device_id}_fan"
+        # Adjusted features to fix AttributeErrors:
+        # - SET_PRESET_MODE -> PRESET_MODE
+        # - Used SET_SPEED as user reported SET_PERCENTAGE missing
         self._attr_supported_features = (
             FanEntityFeature.SET_SPEED | 
             FanEntityFeature.TURN_OFF | 
             FanEntityFeature.TURN_ON | 
-            FanEntityFeature.SET_PRESET_MODE
+            FanEntityFeature.PRESET_MODE
         )
         self._attr_speed_count = len(ORDERED_NAMED_FAN_SPEEDS)
         self._attr_preset_modes = ORDERED_NAMED_FAN_SPEEDS
@@ -119,14 +122,8 @@ class ElicaFan(FanEntity):
         await self._send_capabilities({"110": 0})
         self._update_local_state({"110": 0})
         
-        # Trigger cover close if it's open
-        registry = er.async_get(self.hass)
-        cover_unique_id = f"{self._device_id}_cover"
-        entity_id = registry.async_get_entity_id("cover", DOMAIN, cover_unique_id)
-        if entity_id:
-            await self.hass.services.async_call(
-                "cover", "close_cover", {"entity_id": entity_id}, blocking=False
-            )
+        # REMOVED auto-close logic here as requested.
+        # The cover will stay in its current position (raised).
 
     async def async_set_preset_mode(self, preset_mode: str):
         await self._check_and_raise()
