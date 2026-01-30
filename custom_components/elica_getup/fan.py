@@ -38,7 +38,7 @@ class ElicaFan(FanEntity):
         self._device_id = device["id"]
         self._attr_unique_id = f"{self._device_id}_fan"
         self._attr_supported_features = (
-            FanEntityFeature.SET_PERCENTAGE | 
+            FanEntityFeature.SET_SPEED | 
             FanEntityFeature.TURN_OFF | 
             FanEntityFeature.TURN_ON | 
             FanEntityFeature.PRESET_MODE
